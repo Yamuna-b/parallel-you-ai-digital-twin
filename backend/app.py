@@ -1,34 +1,3 @@
-# Import AI media generation functions
-from ai_media import generate_dalle_image, generate_sd_image, generate_pika_video, generate_synthesia_video
-
-# AI Image Generation Endpoint
-@app.route('/api/generate-image', methods=['POST'])
-def generate_image():
-    data = request.json
-    prompt = data.get('prompt', '')
-    model = data.get('model', 'dalle')
-    if model == 'dalle':
-        result = generate_dalle_image(prompt)
-    elif model == 'sd':
-        result = generate_sd_image(prompt)
-    else:
-        return jsonify({'error': 'Invalid model'}), 400
-    return jsonify(result)
-
-# AI Video Generation Endpoint
-@app.route('/api/generate-video', methods=['POST'])
-def generate_video():
-    data = request.json
-    prompt = data.get('prompt', '')
-    model = data.get('model', 'pika')
-    if model == 'pika':
-        result = generate_pika_video(prompt)
-    elif model == 'synthesia':
-        script = data.get('script', prompt)
-        result = generate_synthesia_video(script)
-    else:
-        return jsonify({'error': 'Invalid model'}), 400
-    return jsonify(result)
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -40,8 +9,19 @@ import os
 import hashlib
 import secrets
 from functools import wraps
+
+# Import models for user profile, scenario, and media
+from models import UserProfile, Scenario, Media
+
+
+# Import AI media generation functions
+from ai_media import (
+    generate_dalle_image, generate_sd_image, generate_pika_video, 
+    generate_synthesia_video, generate_life_movie, generate_avatar_image, 
+    create_vision_board
+)
 from database import (
-    db_manager, save_user, get_user_by_email, save_simulation as db_save_simulation, 
+    db_manager, save_user, get_user_by_email, save_simulation as db_save_simulation,
     get_user_simulations, get_analytics_data, User, Simulation
 )
 
@@ -49,8 +29,40 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
-# Import models for user profile, scenario, and media
-from models import UserProfile, Scenario, Media
+
+# AI Image Generation Endpoint
+@app.route('/api/generate-image', methods=['POST'])
+def generate_image():
+    data = request.json
+    prompt = data.get('prompt', '')
+    model = data.get('model', 'dalle')
+    user_context = data.get('user_context', {})
+    
+    if model == 'dalle':
+        result = generate_dalle_image(prompt, user_context)
+    elif model == 'sd':
+        result = generate_sd_image(prompt, user_context)
+    else:
+        return jsonify({'error': 'Invalid model'}), 400
+    return jsonify(result)
+
+# AI Video Generation Endpoint
+@app.route('/api/generate-video', methods=['POST'])
+def generate_video():
+    data = request.json
+    prompt = data.get('prompt', '')
+    model = data.get('model', 'pika')
+    user_context = data.get('user_context', {})
+    
+    if model == 'pika':
+        result = generate_pika_video(prompt, user_context)
+    elif model == 'synthesia':
+        script = data.get('script', prompt)
+        result = generate_synthesia_video(script, user_context)
+    else:
+        return jsonify({'error': 'Invalid model'}), 400
+    return jsonify(result)
+
 
 # Database connection using DatabaseManager
 print("🔗 Initializing database connection...")
@@ -228,7 +240,7 @@ def generate_ar_vr_content(data, score):
     """Generate AR/VR content suggestions"""
     dream_career = data.get('dreamCareer', '').lower()
     suggestions = []
-    
+
     # AR/VR career-specific content
     if 'engineer' in dream_career or 'developer' in dream_career:
         suggestions.extend([
@@ -325,7 +337,7 @@ def generate_multimedia_suggestions(data, score):
     """Generate multimedia content suggestions"""
     dream_career = data.get('dreamCareer', '').lower()
     suggestions = []
-    
+
     # Career-specific multimedia suggestions
     if 'engineer' in dream_career or 'developer' in dream_career:
         suggestions.extend([
@@ -384,7 +396,7 @@ def predict():
         ar_vr_suggestions = generate_ar_vr_content(data, score)
         
         # Generate 3D avatar data
-        avatar_data = generate_3d_avatar_data(data)
+        avatar_data = generate_3d_avatar_data({**data, 'score': score})
         
         # Additional insights
         insights = {
@@ -393,6 +405,25 @@ def predict():
             'risk_level': 'Low' if score >= 80 else 'Medium' if score >= 60 else 'High',
             'confidence_level': 'Very High' if score >= 85 else 'High' if score >= 70 else 'Medium' if score >= 55 else 'Low'
         }
+        
+        # Generate AI media if requested
+        media_results = {}
+        if data.get('generate_image', False):
+            image_prompt = f"Show {data.get('name', 'person')} as a successful {data.get('dreamCareer', 'professional')} in the year 2030"
+            media_results['image'] = generate_dalle_image(image_prompt, data)
+        
+        if data.get('generate_video', False):
+            media_results['life_movie'] = generate_life_movie([data], data)
+        
+        if data.get('generate_avatar', False):
+            media_results['avatar'] = generate_avatar_image(data)
+        
+        if data.get('create_vision_board', False):
+            goals = {
+                'personal': data.get('personal_goals', []),
+                'professional': data.get('professional_goals', [])
+            }
+            media_results['vision_board'] = create_vision_board({**data, 'score': score}, goals)
         
         # Enhanced result with new features
         result = {
@@ -404,6 +435,7 @@ def predict():
             "multimedia_suggestions": multimedia_suggestions,
             "ar_vr_suggestions": ar_vr_suggestions,
             "avatar_data": avatar_data,
+            "media": media_results,
             "simulation_id": f"sim_{random.randint(10000, 99999)}",
             "timestamp": datetime.now().isoformat(),
             "user_id": user_id
@@ -442,284 +474,174 @@ def update_profile(user_id):
     UserProfile.update(user_id, data)
     return jsonify({'status': 'updated'})
 
-# Scenario Endpoints
-@app.route('/api/scenario', methods=['POST'])
-def create_scenario():
-    data = request.json
-    result = Scenario.create(data)
-    return jsonify({'inserted_id': str(result.inserted_id)}), 201
-
-@app.route('/api/scenario/<user_id>', methods=['GET'])
-def get_scenarios(user_id):
-    scenarios = Scenario.get_all(user_id)
-    for s in scenarios:
-        s['_id'] = str(s['_id'])
-    return jsonify(scenarios)
-
-# Media Endpoints
-@app.route('/api/media', methods=['POST'])
-def log_media():
-    data = request.json
-    result = Media.log(data)
-    return jsonify({'inserted_id': str(result.inserted_id)}), 201
-
-@app.route('/api/media/<user_id>', methods=['GET'])
-def get_media(user_id):
-    media = Media.get_all(user_id)
-    for m in media:
-        m['_id'] = str(m['_id'])
-    return jsonify(media)
-
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint with API information"""
-    return jsonify({
-        "service": "Parallel You: AI-Generated Personalized Reality Simulator",
-        "version": "2.0.0",
-        "status": "running",
-        "endpoints": {
-            "health": "/health",
-            "predict": "/predict (POST)",
-            "scenarios": "/scenarios",
-            "community": "/community/insights",
-            "chat": "/ai/chat (POST)",
-            "simulations": "/simulations/<user_id>"
-        },
-        "documentation": "https://github.com/parallelyou/api-docs",
-        "frontend": "http://localhost:5174"
-    })
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "healthy", "service": "Parallel You API"})
-
-@app.route('/simulations/<user_id>', methods=['GET'])
-def get_user_simulations_endpoint(user_id):
-    """Get all simulations for a user"""
+# Community Features Endpoints
+@app.route('/api/community/scenarios', methods=['GET'])
+def get_community_scenarios():
+    """Get publicly shared scenarios"""
     try:
-        simulations = get_user_simulations(user_id)
-        return jsonify({"simulations": simulations})
+        scenarios = [
+            {
+                "title": "Software Engineer → AI Researcher",
+                "description": "Transitioning from traditional software development to AI research",
+                "views": 1250,
+                "likes": 89,
+                "comments": 23,
+                "success_rate": 78,
+                "user": "Anonymous",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "tags": ["technology", "ai", "research"]
+            },
+            {
+                "title": "Teacher → Educational Technology Entrepreneur", 
+                "description": "Leaving classroom teaching to build EdTech solutions",
+                "views": 980,
+                "likes": 67,
+                "comments": 15,
+                "success_rate": 85,
+                "user": "EduTech_Dreamer",
+                "timestamp": "2024-01-14T14:22:00Z",
+                "tags": ["education", "entrepreneurship", "technology"]
+            },
+            {
+                "title": "Marketing Manager → UX Designer",
+                "description": "Pivoting from marketing to user experience design",
+                "views": 756,
+                "likes": 54,
+                "comments": 12,
+                "success_rate": 82,
+                "user": "DesignMinded",
+                "timestamp": "2024-01-13T09:15:00Z",
+                "tags": ["design", "ux", "career-change"]
+            },
+            {
+                "title": "Doctor → Digital Health Startup Founder",
+                "description": "From practicing medicine to revolutionizing healthcare with technology",
+                "views": 1100,
+                "likes": 95,
+                "comments": 31,
+                "success_rate": 73,
+                "user": "HealthTech_MD",
+                "timestamp": "2024-01-12T16:45:00Z",
+                "tags": ["healthcare", "startups", "technology"]
+            },
+            {
+                "title": "Financial Analyst → Sustainable Finance Consultant",
+                "description": "Specializing in ESG investing and green finance",
+                "views": 642,
+                "likes": 41,
+                "comments": 8,
+                "success_rate": 79,
+                "user": "GreenFinance",
+                "timestamp": "2024-01-11T11:20:00Z",
+                "tags": ["finance", "sustainability", "consulting"]
+            }
+        ]
+        
+        return jsonify({
+            "scenarios": scenarios,
+            "total_count": len(scenarios),
+            "timestamp": datetime.now().isoformat()
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/scenarios', methods=['GET'])
-def get_scenarios():
-    """Get available life scenarios"""
-    scenarios = [
-        {
-            'id': 'career_change',
-            'name': 'Career Change',
-            'description': 'Explore switching to a completely different field',
-            'icon': '💼',
-            'difficulty': 'Medium'
-        },
-        {
-            'id': 'education_path',
-            'name': 'Education Path',
-            'description': 'Simulate different educational choices and their impact',
-            'icon': '🎓',
-            'difficulty': 'Easy'
-        },
-        {
-            'id': 'location_move',
-            'name': 'Location Change',
-            'description': 'See how moving to a new city affects your career',
-            'icon': '🌍',
-            'difficulty': 'Hard'
-        },
-        {
-            'id': 'entrepreneurship',
-            'name': 'Start a Business',
-            'description': 'Simulate starting your own company or side hustle',
-            'icon': '🚀',
-            'difficulty': 'Hard'
-        },
-        {
-            'id': 'work_life_balance',
-            'name': 'Work-Life Balance',
-            'description': 'Explore different work arrangements and lifestyle choices',
-            'icon': '⚖️',
-            'difficulty': 'Easy'
-        }
-    ]
-    return jsonify({"scenarios": scenarios})
-
-@app.route('/community/insights', methods=['GET'])
-def get_community_insights():
-    """Get aggregated community insights"""
+@app.route('/api/analytics/dashboard', methods=['GET'])
+def get_analytics_dashboard():
+    """Get analytics for dashboard"""
     try:
-        insights = get_analytics_data()
-        return jsonify(insights)
+        analytics = get_analytics_data()
+        
+        # Add trending insights
+        analytics.update({
+            "trending_careers": [
+                {"career": "AI/ML Engineer", "growth": "+45%", "avg_score": 82},
+                {"career": "UX Designer", "growth": "+32%", "avg_score": 78},
+                {"career": "Data Scientist", "growth": "+28%", "avg_score": 80},
+                {"career": "Product Manager", "growth": "+25%", "avg_score": 75},
+                {"career": "Digital Marketer", "growth": "+22%", "avg_score": 73}
+            ],
+            "user_satisfaction": 94.5,
+            "avg_success_score": 77.2,
+            "total_scenarios_run": 50000,
+            "active_users": 2500,
+            "success_stories": 1850
+        })
+        
+        return jsonify(analytics)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/multimedia/upload', methods=['POST'])
-def upload_multimedia():
-    """Handle multimedia uploads (placeholder for now)"""
-    return jsonify({
-        "message": "Multimedia upload feature coming soon!",
-        "supported_formats": ["jpg", "png", "mp4", "mp3", "wav"],
-        "max_size": "10MB"
-    })
-
-@app.route('/auth/register', methods=['POST'])
-def register():
-    """User registration endpoint"""
+@app.route('/api/user/scenarios/<user_id>', methods=['GET'])
+def get_user_scenario_history(user_id):
+    """Get user's simulation history"""
     try:
-        data = request.json or {}
-        email = data.get('email', '').lower()
-        password = data.get('password', '')
-        name = data.get('name', '')
-        
-        if not email or not password or not name:
-            return jsonify({'error': 'Email, password, and name are required'}), 400
-        
-        # Check if user already exists
-        existing_user = get_user_by_email(email)
-        if existing_user:
-            return jsonify({'error': 'User already exists'}), 409
-        
-        # Create user using User model
-        user = User.create(email, name, hash_password(password))
-        
-        # Save to database
-        if save_user(user):
-            # Set session
-            session['user_id'] = user.user_id
-            session['email'] = email
-            session['name'] = name
-            
-            return jsonify({
-                'message': 'User registered successfully',
-                'user': user.to_dict()
-            })
-        else:
-            return jsonify({'error': 'Failed to save user'}), 500
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/auth/login', methods=['POST'])
-def login():
-    """User login endpoint"""
-    try:
-        data = request.json or {}
-        email = data.get('email', '').lower()
-        password = data.get('password', '')
-        
-        if not email or not password:
-            return jsonify({'error': 'Email and password are required'}), 400
-        
-        # Get user from database
-        user = get_user_by_email(email)
-        if not user or not verify_password(password, user.password_hash):
-            return jsonify({'error': 'Invalid credentials'}), 401
-        
-        # Update last login
-        if users_collection:
-            users_collection.update_one(
-                {'email': email},
-                {'$set': {'last_login': datetime.now()}}
-            )
-        
-        user_id = user.user_id
-        
-        # Set session
-        session['user_id'] = user_id
-        session['email'] = email
+        scenarios = get_user_simulations(user_id, limit=50)
         
         return jsonify({
-            'message': 'Login successful',
-            'user_id': user_id,
-            'email': email
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/auth/logout', methods=['POST'])
-def logout():
-    """User logout endpoint"""
-    session.clear()
-    return jsonify({'message': 'Logout successful'})
-
-@app.route('/auth/status', methods=['GET'])
-def auth_status():
-    """Check authentication status"""
-    if 'user_id' in session:
-        return jsonify({
-            'authenticated': True,
-            'user_id': session['user_id'],
-            'email': session.get('email', '')
-        })
-    return jsonify({'authenticated': False})
-
-@app.route('/ar-vr/content', methods=['POST'])
-def ar_vr_content():
-    """Generate AR/VR content for user"""
-    try:
-        data = request.json or {}
-        user_id = data.get('user_id', session.get('user_id', str(uuid.uuid4())))
-        
-        # Get user's latest simulation
-        if simulations_collection:
-            latest_sim = simulations_collection.find_one(
-                {'user_id': user_id},
-                sort=[('timestamp', -1)]
-            )
-            if latest_sim:
-                sim_data = latest_sim['input_data']
-                score = latest_sim['result'].get('score', 50)
-            else:
-                sim_data = data
-                score = 50
-        else:
-            sim_data = data
-            score = 50
-        
-        ar_vr_suggestions = generate_ar_vr_content(sim_data, score)
-        avatar_data = generate_3d_avatar_data(sim_data)
-        
-        return jsonify({
-            'ar_vr_suggestions': ar_vr_suggestions,
-            'avatar_data': avatar_data,
-            'user_id': user_id
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/ai/chat', methods=['POST'])
-def ai_chat():
-    """AI chat endpoint for digital twin conversations"""
-    try:
-        data = request.json or {}
-        message = data.get('message', '')
-        user_id = data.get('user_id', session.get('user_id', str(uuid.uuid4())))
-        
-        # Simple AI responses based on keywords
-        responses = {
-            'hello': "Hello! I'm your digital twin. I'm here to help you explore different life paths and make informed decisions. What would you like to know about your future?",
-            'career': "I can help you explore different career paths! Try running a simulation with your dream job to see how likely you are to succeed.",
-            'help': "I can help you with career simulations, life path analysis, and personalized recommendations. What specific area interests you?",
-            'future': "The future is full of possibilities! Let's explore some scenarios together. What career or life change are you considering?",
-            'ar': "AR technology can help you visualize your future in 3D! Try using AR apps to see how your career choices would look in the real world.",
-            'vr': "VR simulations can let you experience different career paths before committing. It's like a test drive for your future!",
-            'avatar': "I can generate a 3D avatar based on your personality and career goals. This avatar can represent you in virtual environments."
-        }
-        
-        # Find matching response
-        response = "I'm here to help you explore your potential futures! Try asking about careers, life changes, AR/VR experiences, or run a simulation to see what's possible."
-        for keyword, resp in responses.items():
-            if keyword in message.lower():
-                response = resp
-                break
-        
-        return jsonify({
-            "response": response,
-            "timestamp": datetime.now().isoformat(),
+            "scenarios": scenarios,
+            "total_count": len(scenarios),
             "user_id": user_id
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+@app.route('/api/community/share', methods=['POST'])
+def share_scenario():
+    """Share a scenario with the community"""
+    try:
+        data = request.json
+        scenario_id = data.get('scenario_id')
+        public = data.get('public', False)
+        
+        # Mock implementation - in real app, update database
+        return jsonify({
+            "success": True,
+            "message": "Scenario shared successfully!",
+            "scenario_id": scenario_id,
+            "public": public
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """Get user notifications"""
+    try:
+        notifications = [
+            {
+                "id": "notif_1",
+                "type": "success",
+                "title": "Simulation Complete!",
+                "message": "Your AI-generated career path simulation is ready to view.",
+                "timestamp": datetime.now().isoformat(),
+                "read": False
+            },
+            {
+                "id": "notif_2", 
+                "type": "community",
+                "title": "New Community Insight",
+                "message": "Check out the latest trending career transitions this week!",
+                "timestamp": (datetime.now() - timedelta(hours=2)).isoformat(),
+                "read": False
+            }
+        ]
+        
+        return jsonify({
+            "notifications": notifications,
+            "unread_count": sum(1 for n in notifications if not n['read'])
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "Parallel You API",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

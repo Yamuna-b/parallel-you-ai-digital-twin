@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+console.log("React version in X:", React.version);
 
 const TechnicalDocumentation = () => {
   const [activeSection, setActiveSection] = useState('overview');

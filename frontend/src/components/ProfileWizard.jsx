@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+console.log("React version in X:", React.version);
+
 
 const steps = [
   'Basic Info',

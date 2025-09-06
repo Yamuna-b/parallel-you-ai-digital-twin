@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import Particles from '@tsparticles/react';
 import { loadSlim } from '@tsparticles/slim';
 import { motion } from 'framer-motion';
+console.log("React version in X:", React.version);
 
 const AnimatedBackground = () => {
   const particlesInit = useCallback(async (engine) => {

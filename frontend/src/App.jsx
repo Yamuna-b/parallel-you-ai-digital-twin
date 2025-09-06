@@ -121,6 +121,81 @@ function App() {
     }
   };
 
+  // Add to App.jsx - Enhanced media display component
+const MediaDisplay = ({ media }) => {
+  if (!media || Object.keys(media).length === 0) return null;
+  
+  return (
+    <motion.div 
+      className="simulation-media"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <h4>🎨 Generated Media</h4>
+      
+      {media.image && (
+        <div className="media-item">
+          <h5>Your Future Vision</h5>
+          <img 
+            src={media.image.image_url} 
+            alt={media.image.prompt_used}
+            className="generated-image"
+            style={{ maxWidth: '100%', borderRadius: '12px' }}
+          />
+          {media.image.fallback && (
+            <p className="fallback-message">📱 {media.image.message}</p>
+          )}
+        </div>
+      )}
+      
+      {media.life_movie && (
+        <div className="media-item">
+          <h5>🎬 Your Life Movie Script</h5>
+          <div className="movie-script">
+            <pre>{media.life_movie.movie_script}</pre>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+// Update your simulation form to include media generation options
+const enhancedSimulationForm = (
+  <form onSubmit={handleSubmit} className="simulation-form">
+    {/* Your existing form fields */}
+    
+    {/* NEW: Media generation options */}
+    <div className="media-options">
+      <label className="checkbox-option">
+        <input 
+          type="checkbox" 
+          name="generate_image"
+          checked={formData.generate_image || false}
+          onChange={handleInputChange}
+        />
+        Generate AI Image of Your Future 🎨
+      </label>
+      
+      <label className="checkbox-option">
+        <input 
+          type="checkbox" 
+          name="generate_video"
+          checked={formData.generate_video || false}
+          onChange={handleInputChange}
+        />
+        Create Life Movie Script 🎬
+      </label>
+    </div>
+    
+    <button type="submit" className="simulate-btn">
+      {isLoading ? 'Generating Your Future...' : 'Simulate Life Path'}
+    </button>
+  </form>
+);
+
+
   const handleLogout = async () => {
     try {
       await fetch('http://localhost:5000/auth/logout', {
