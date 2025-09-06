@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
+import ProfileWizard from './components/ProfileWizard.jsx';
 import AnimatedBackground from './components/AnimatedBackground';
 import LifeScenarios from './components/LifeScenarios';
 import TechnicalDocumentation from './components/TechnicalDocumentation';
@@ -192,6 +193,7 @@ function App() {
           >
             Parallel You
           </motion.h1>
+          <ProfileWizard />
           <motion.p 
             className="tagline"
             initial={{ opacity: 0 }}

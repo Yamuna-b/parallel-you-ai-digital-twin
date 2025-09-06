@@ -1,3 +1,34 @@
+# Import AI media generation functions
+from ai_media import generate_dalle_image, generate_sd_image, generate_pika_video, generate_synthesia_video
+
+# AI Image Generation Endpoint
+@app.route('/api/generate-image', methods=['POST'])
+def generate_image():
+    data = request.json
+    prompt = data.get('prompt', '')
+    model = data.get('model', 'dalle')
+    if model == 'dalle':
+        result = generate_dalle_image(prompt)
+    elif model == 'sd':
+        result = generate_sd_image(prompt)
+    else:
+        return jsonify({'error': 'Invalid model'}), 400
+    return jsonify(result)
+
+# AI Video Generation Endpoint
+@app.route('/api/generate-video', methods=['POST'])
+def generate_video():
+    data = request.json
+    prompt = data.get('prompt', '')
+    model = data.get('model', 'pika')
+    if model == 'pika':
+        result = generate_pika_video(prompt)
+    elif model == 'synthesia':
+        script = data.get('script', prompt)
+        result = generate_synthesia_video(script)
+    else:
+        return jsonify({'error': 'Invalid model'}), 400
+    return jsonify(result)
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from pymongo import MongoClient
@@ -17,6 +48,9 @@ from database import (
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Import models for user profile, scenario, and media
+from models import UserProfile, Scenario, Media
 
 # Database connection using DatabaseManager
 print("🔗 Initializing database connection...")
@@ -386,6 +420,55 @@ def predict():
             "score": 0,
             "error": str(e)
         }), 500
+
+# User Profile Endpoints
+@app.route('/api/profile', methods=['POST'])
+def create_profile():
+    data = request.json
+    result = UserProfile.create(data)
+    return jsonify({'inserted_id': str(result.inserted_id)}), 201
+
+@app.route('/api/profile/<user_id>', methods=['GET'])
+def get_profile(user_id):
+    profile = UserProfile.get(user_id)
+    if profile:
+        profile['_id'] = str(profile['_id'])
+        return jsonify(profile)
+    return jsonify({'error': 'Profile not found'}), 404
+
+@app.route('/api/profile/<user_id>', methods=['PUT'])
+def update_profile(user_id):
+    data = request.json
+    UserProfile.update(user_id, data)
+    return jsonify({'status': 'updated'})
+
+# Scenario Endpoints
+@app.route('/api/scenario', methods=['POST'])
+def create_scenario():
+    data = request.json
+    result = Scenario.create(data)
+    return jsonify({'inserted_id': str(result.inserted_id)}), 201
+
+@app.route('/api/scenario/<user_id>', methods=['GET'])
+def get_scenarios(user_id):
+    scenarios = Scenario.get_all(user_id)
+    for s in scenarios:
+        s['_id'] = str(s['_id'])
+    return jsonify(scenarios)
+
+# Media Endpoints
+@app.route('/api/media', methods=['POST'])
+def log_media():
+    data = request.json
+    result = Media.log(data)
+    return jsonify({'inserted_id': str(result.inserted_id)}), 201
+
+@app.route('/api/media/<user_id>', methods=['GET'])
+def get_media(user_id):
+    media = Media.get_all(user_id)
+    for m in media:
+        m['_id'] = str(m['_id'])
+    return jsonify(media)
 
 @app.route('/', methods=['GET'])
 def root():
