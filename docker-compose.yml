@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: parallel_you_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: parallel_you
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - parallel_you_network
+
+  backend:
+    build: .
+    container_name: parallel_you_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/parallel_you
+    depends_on:
+      - mongodb
+    networks:
+      - parallel_you_network
+
+  frontend:
+    image: nginx:alpine
+    container_name: parallel_you_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    networks:
+      - parallel_you_network
+
+volumes:
+  mongodb_data:
+
+networks:
+  parallel_you_network:
+    driver: bridge

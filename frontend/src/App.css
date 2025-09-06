@@ -1,0 +1,344 @@
+/* Digital Twin Theme - Enhanced with Animations and Responsive Design */
+:root {
+  /* Black/Grey Palette */
+  --black-100: #111215;
+  --black-200: #181a1e;
+  --black-300: #232428;
+  --black-400: #2c2d31;
+  --black-500: #35363a;
+  --black-600: #404144;
+  --white-100: #ffffff;
+  --white-200: #e9ecef;
+  --white-300: #adb5bd;
+  --outline-light: #e9ecef;
+  --outline-dark: #232428;
+  --primary-color: #ffffff;
+  --primary-dark: #adb5bd;
+  --accent-color: #e9ecef;
+  --header-height: 56px;
+  --nav-height: 44px;
+}
+
+/* Remove gradients and blur from backgrounds */
+body {
+  background: var(--black-100);
+  color: var(--white-100);
+}
+
+/* Header smaller, solid black, no blur, always above nav */
+.header {
+  background: var(--black-300);
+  border-bottom: 1px solid var(--outline-light);
+  height: var(--header-height);
+  min-height: var(--header-height);
+  padding: 0 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  box-shadow: none;
+}
+
+.logo {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--white-100);
+  background: none;
+  -webkit-text-fill-color: var(--white-100);
+  text-align: left;
+  margin-left: 2vw;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: var(--white-300);
+  margin-left: 2vw;
+  font-weight: 400;
+  background: none;
+}
+
+.research-badges {
+  display: none;
+}
+
+/* Nav bar directly below header, always visible, solid black */
+.nav {
+  background: var(--black-400);
+  border-bottom: 1px solid var(--outline-light);
+  height: var(--nav-height);
+  min-height: var(--nav-height);
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+}
+
+.nav .container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  padding: 0 2vw;
+}
+
+.nav-btn {
+  background: var(--black-500);
+  border: 1px solid var(--outline-light);
+  color: var(--white-100);
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-btn.active {
+  background: var(--black-600);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.auth-btn {
+  background: var(--black-600) !important;
+  color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+
+/* Main content padding to avoid header/nav overlap */
+.main, .home-page, .technical-documentation {
+  padding-top: calc(var(--header-height) + var(--nav-height) + 24px);
+}
+
+/* All containers/boxes: black/grey, white outline, partial transparency */
+.simulation-panel,
+.result-panel,
+.scenario-card,
+.docs-content,
+.docs-sidebar,
+.feature-card {
+  background: rgba(24, 26, 30, 0.85);
+  border: 1px solid var(--outline-light);
+  color: var(--white-100);
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.18); /* Subtle shadow for separation */
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+/* Remove gradients and blur from cards */
+.feature-card,
+.scenario-card {
+  background: rgba(35, 36, 40, 0.85);
+  border: 1px solid var(--outline-light);
+  color: var(--white-200);
+}
+
+/* Card hover effect */
+.scenario-card:hover,
+.feature-card:hover,
+.docs-sidebar:hover,
+.docs-content:hover {
+  box-shadow: 0 6px 24px 0 rgba(0,0,0,0.28);
+  border-color: var(--accent-color);
+}
+
+/* Button hover effect */
+.nav-btn:hover,
+.simulate-btn:hover,
+.cta-btn:hover {
+  background: var(--black-600);
+  color: var(--accent-color);
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.22);
+  border-color: var(--accent-color);
+}
+
+/* Remove emojis except in cards where needed */
+.feature-icon,
+.scenario-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Checkbox spacing */
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem; /* Increased space between checkbox and text */
+  padding: 0.7rem 1rem;
+  background: var(--black-400);
+  border: 1px solid var(--outline-light);
+  border-radius: 8px;
+  color: var(--white-100);
+  font-size: 1rem;
+}
+
+.habit-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--white-100);
+  margin-right: 0.7rem;
+}
+
+/* Remove blur from overlays */
+.scenario-overlay {
+  background: rgba(24, 26, 30, 0.98);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Result/journal text wrapping */
+.result-message, .journal-content, .recommendations, .insights, .suggestions-grid {
+  word-break: break-word;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* Add support for images/videos in simulation results */
+.simulation-media {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.simulation-media img, .simulation-media video {
+  max-width: 320px;
+  border-radius: 8px;
+  border: 1px solid var(--outline-light);
+  background: var(--black-500);
+}
+
+* {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Remove unnecessary emojis everywhere except .feature-icon, .scenario-icon */
+.badge, .nav-btn, .nav-item, .panel-header h2, .panel-header p, .result-panel h3, .result-message h4, .recommendations h4, .insights h4, .journal-entry h4, .suggestions-grid h4 {
+  background: none;
+  color: var(--white-100);
+}
+
+/* Responsive adjustments for header/nav */
+@media (max-width: 767px) {
+  .header {
+    height: 44px;
+    min-height: 44px;
+    font-size: 1.2rem;
+  }
+  .nav {
+    height: 38px;
+    min-height: 38px;
+    font-size: 0.95rem;
+  }
+  .main, .home-page, .technical-documentation {
+    padding-top: 90px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .animated-background,
+  .nav,
+  .simulate-btn,
+  .footer {
+    display: none;
+  }
+  
+  .app {
+    background: white;
+    color: black;
+  }
+  
+  .simulation-panel,
+  .result-panel,
+  .scenario-card {
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+}
+
+/* Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.simulate-btn:disabled::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Additional Animation Classes */
+.fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.6s ease-out;
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.6s ease-out;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.bounce-in {
+  animation: bounceIn 0.8s ease-out;
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
